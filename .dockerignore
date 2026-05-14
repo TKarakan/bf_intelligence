@@ -1,0 +1,28 @@
+# --- Python & Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- Environment & Virtual Envs ---
+.venv/
+venv/
+env/
+.env
+
+# --- Data & Notebooks 
+data/
+*.xlsx
+*.csv
+.ipynb_checkpoints/
+
+# --- Version Control ---
+.git/
+.gitignore
+
+# --- IDEs & OS ---
+.vscode/
+.idea/
+.DS_Store

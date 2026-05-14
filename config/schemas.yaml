@@ -1,0 +1,40 @@
+# Blast Furnace Data Contract
+blast_furnace:
+  # 1. Grup: Besleme (Input)
+  besleme:
+    columns:
+      Fb: {type: "double", description: "Hava Debisi"}
+      Th: {type: "double", description: "Sıcak Hava Sıcaklığı"}
+      Tc: {type: "double", description: "Soğuk Hava Sıcaklığı"}
+      Fo: {type: "double", description: "Oksijen Oranı"}
+      R:  {type: "double", description: "Cevher/Kok Oranı"}
+
+  # 2. Grup: Gaz Dinamiği (Pressure)
+  gaz_dinamigi:
+    columns:
+      Ph:  {type: "double", description: "Giriş Basıncı"}
+      Pc:  {type: "double", description: "Merkez Basıncı"}
+      Pt:  {type: "double", description: "Tepe Basıncı"}
+      dP:  {type: "double", description: "Toplam Basınç Farkı"}
+      dPu: {type: "double", description: "Üst Basınç Farkı"}
+      dPl: {type: "double", description: "Alt Basınç Farkı"}
+
+  # 3. Grup: Kimyasal Analiz (Gas)
+  kimya:
+    columns:
+      CO2: {type: "double", description: "Karbondioksit Oranı"}
+      H2:  {type: "double", description: "Hidrojen Oranı"}
+
+  # 4. Grup: Sıcaklık Dağılımı (Thermal)
+  sicakliklar:
+    tt_cols: ["Tt1", "Tt2", "Tt3", "Tt4"]
+    tp_cols: ["Tp1", "Tp2", "Tp3", "Tp4", "Tp5", "Tp6", "Tp7", "Tp8", "Tp9", "Tp10"]
+    type: "double"
+
+  # Hedef Değişken (Target)
+  target:
+    Si: {type: "double", description: "Silisyum Oranı"}
+
+  # Ortak Alanlar
+  common:
+    dt: {type: "timestamp", description: "Zaman Damgası"}

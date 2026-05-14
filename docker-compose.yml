@@ -1,0 +1,222 @@
+services:
+  # --- MESSAGING (Kafka KRaft Mode) ---
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    hostname: kafka
+    container_name: infra-kafka-1
+    ports:
+      - "9092:9092"
+    networks:
+      - bf_network  
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # --- STORAGE & TRACKING ---
+  postgres:
+    image: postgres:15-alpine
+    container_name: bf_postgres
+    networks:
+      - bf_network
+    healthcheck:  
+      test: ["CMD", "pg_isready", "-q", "-d", "${DB_NAME}", "-U", "${DB_USER}"]
+      interval: 10s 
+      timeout: 5s
+      retries: 5
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASS}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: bf_pgadmin
+    networks:
+      - bf_network 
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=adminpassword
+    ports:
+      - "8880:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: infra-mlflow-1
+    ports:
+      - "5000:5000"
+    networks:
+      - bf_network
+    volumes:
+      - ./mlflow_data:/app/mlflow_data  
+    command: >
+      mlflow server 
+      --host 0.0.0.0 
+      --port 5000 
+      --backend-store-uri sqlite:////app/mlflow_data/mlflow.db 
+      --default-artifact-root mlflow-artifacts:/ 
+      --artifacts-destination /app/mlflow_data/artifacts 
+      --allowed-hosts "*" 
+      --serve-artifacts
+
+  # --- PROCESSING ---
+  spark-master:
+    build:
+      context: .
+      dockerfile: ./infra/Dockerfile.spark
+    container_name: infra-spark-master-1
+    user: root
+    working_dir: /app
+    networks:
+      - bf_network
+    volumes:                      
+      - ./data:/app/data
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    command: >
+      bash -c "/opt/spark/sbin/start-master.sh && tail -f /opt/spark/logs/*"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  spark-worker:
+    build:
+      context: .
+      dockerfile: ./infra/Dockerfile.spark
+    container_name: infra-spark-worker-1
+    user: root
+    working_dir: /app 
+    networks:
+      - bf_network
+    volumes:                    
+      - ./data:/app/data
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      - SPARK_WORKER_DIR=/app/data/spark_work  
+    command: >
+      bash -c "/opt/spark/sbin/start-worker.sh spark://spark-master:7077 && tail -f /opt/spark/logs/*"
+
+  notebook:
+    build:
+      context: .
+      dockerfile: ./infra/Dockerfile
+    image: bf_notebook_app:latest 
+    container_name: bf_jupyter_scratchpad
+    ports:
+      - "8888:8888"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONPATH=/app
+    working_dir: /app
+    command: tail -f /dev/null
+
+  # --- PYTHON APPLICATION ---
+
+  bf_orchestrator:
+    build:
+      context: .
+      dockerfile: ./infra/Dockerfile
+    container_name: bf_orchestrator
+    networks:
+      - bf_network
+    user: root
+    working_dir: /app
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./models:/app/models
+      - ./reports:/app/reports
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_INTERNAL_BROKER} 
+      - KAFKA_TOPIC_NAME=${KAFKA_TOPIC_NAME}
+      - PYTHONPATH=/app
+    
+    command: tail -f /dev/null
+
+  api:
+    build:
+      context: .
+      dockerfile: ./infra/Dockerfile 
+    container_name: bf_api_service
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./models:/app/models
+    networks:
+      - bf_network
+    environment:
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=${DB_NAME}
+      - DB_HOST=postgres  
+      - DB_PORT=${DB_PORT}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_TOPIC_NAME=${KAFKA_TOPIC_NAME}
+      - PYTHONPATH=/app
+    depends_on:
+      - kafka
+      - postgres
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+  ui:
+    build:
+      context: .
+      dockerfile: ./infra/Dockerfile 
+    container_name: bf_streamlit_ui
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    networks:
+      - bf_network
+    environment:
+      - PYTHONPATH=/app
+      - BF_API_URL=http://api:8000
+    depends_on:
+      - api
+    command: streamlit run src/ui/app.py --server.port 8501 --server.address 0.0.0.0
+ 
+
+
+networks:
+  bf_network: 
+    driver: bridge   

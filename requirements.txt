@@ -1,0 +1,45 @@
+# --- Core Data Processing ---
+pandas>=2.2.2
+numpy>=1.26.4
+openpyxl>=3.1.2
+pyarrow>=15.0.0
+
+# --- Database & Storage ---
+SQLAlchemy>=2.0.28
+psycopg2-binary>=2.9.9
+
+# --- Messaging & Streaming ---
+confluent-kafka>=2.4.0
+
+# --- Distributed Computing (Spark) ---
+pyspark==3.5.3
+
+# --- MLOps & Model Management ---
+mlflow>=2.12.1
+optuna>=3.6.1
+joblib>=1.4.0
+scikit-learn>=1.4.2
+xgboost>=2.0.3
+lightgbm>=4.3.0
+catboost>=1.2.5       
+tensorflow-cpu>=2.16.1
+shap>=0.45.1
+matplotlib>=3.8.4    
+seaborn>=0.13.2
+
+# --- Configuration & Logging ---
+PyYAML>=6.0.1
+tqdm
+
+# --- Testing & Quality (CI/CD) ---
+pytest>=8.2.0
+pytest-mock>=3.14.0
+pytest-cov>=5.0.0
+flake8>=7.0.0
+
+# --- Web & API Frameworks ---
+streamlit>=1.32.0
+fastapi>=0.110.0
+uvicorn>=0.28.0
+python-multipart>=0.0.9
+requests>=2.31.0

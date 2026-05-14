@@ -1,0 +1,37 @@
+# --- Python & Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- Veri ve Model  ---
+data/
+*.xlsx
+*.csv
+*.parquet
+*.pickle
+models/
+
+# --- MLflow & Deney Takibi ---
+mlflow_data/
+reports/
+
+# --- IDE & Sistem ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Loglar ve Geçici Dosyalar ---
+logs/*.log
+*.tmp
+.env
+
+# --- Spark & Hadoop  ---
+spark-warehouse/
+metastore_db/
+derby.log
+checkpoint/
+checkpoints/
+.spark-staged/

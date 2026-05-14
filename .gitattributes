@@ -1,0 +1,13 @@
+
+* text=auto
+
+# Python dosyaları Docker (Linux) içinde çalışacağı için her zaman LF kalsın
+*.py text eol=lf
+
+# Bash scriptleri Linux üzerinde çalışmak zorundadır, mutlaka LF olmalı
+*.sh text eol=lf
+
+# Görsel ve jar dosyalarını olduğu gibi bırak (binary)
+*.png binary
+*.jpg binary
+*.jar binary

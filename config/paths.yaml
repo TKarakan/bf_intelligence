@@ -1,0 +1,24 @@
+paths:
+  
+  raw_source_dir: "data/raw/source"
+  
+  raw_bronze_dir: "/app/data/bronze" 
+  refined_silver_dir: "/app/data/silver"   
+  feature_gold_dir: "/app/data/gold"       
+
+  models_dir: "/app/models"
+  reports_dir: "/app/reports"
+  
+  
+
+  log_file_path: "/app/logs/app.log"
+
+datasets:
+  first:
+    sensors: "sensors_1.csv"
+    target: "target_1.csv"
+    symbols: "symbols_1.csv"
+  second:
+    sensors: "sensors_2.csv"
+    target: "target_2.csv"
+    

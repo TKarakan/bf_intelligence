@@ -1,0 +1,10 @@
+FROM apache/spark:3.5.3
+
+USER root
+
+ENV SPARK_HOME=/opt/spark
+ENV PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+
+
+RUN mkdir -p $SPARK_HOME/logs \
+    && chmod +x $SPARK_HOME/sbin/*.sh $SPARK_HOME/bin/*.sh

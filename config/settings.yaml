@@ -1,0 +1,38 @@
+project:
+  name: "bf_intelligence"
+  version: "1.0.0"
+  
+database:
+  driver: "postgresql"
+  user: "admin"
+  password: "adminpassword"
+  host: "db" 
+  port: 5432
+  dbname: "bf_intelligence"
+  
+kafka:
+  bootstrap_servers: "kafka:29092"
+  topic_name: "furnace-sensors"
+  consumer_group: "bf_intelligence-group"
+  auto_offset_reset: "earliest"
+
+spark:
+  app_name: "BlastFurnaceProcessing"
+  master: "spark://spark-master:7077"
+  log_level: "WARN" 
+
+mlflow:
+  experiment_name: "Blast_Furnace_Silicon_Prediction"
+  tracking_uri: "http://mlflow:5000"
+
+preprocessing:
+ 
+  temp_min: 800
+  temp_max: 2000
+  handle_missing: "median"
+
+model:
+  target_column: "target_Si"
+  test_size: 0.2
+  random_state: 42
+  current_best_model: "bf_model_lgb_v6_1.joblib"
