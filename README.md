@@ -242,7 +242,6 @@ Alert seviyeleri: `GREEN` (stabil) → `YELLOW` (±0.10 sapma bekleniyor) → `R
 | Servis | Adres |
 |---|---|
 | Streamlit Arayüzü | http://localhost:8501 |
-| FastAPI | http://localhost:8000 |
 | MLflow | http://localhost:5000 |
 
 ---
