@@ -12,37 +12,29 @@ Yüksek fırındaki sıvı demir silisyum (Si) içeriğini **2h, 4h, 6h ve 8h** 
 Ham Veri (Excel/CSV)
         │
         ▼
-  Kafka Streamer          ← src/bronze/kafka_streamer.py
-  (sensör + Si verileri Kafka topic'e akar)
+  Kafka Streamer          ← src/bronze/kafka_streamer.py           (sensör + Si verileri Kafka topic'e akar)
         │
         ▼
-  Bronze Katmanı          ← src/bronze/ingest_to_bronze.py
-  (Spark Structured Streaming → Parquet)
+  Bronze Katmanı          ← src/bronze/ingest_to_bronze.py         (Spark Structured Streaming → Parquet)
         │
         ▼
-  Silver Katmanı          ← src/silver/
-  (toplu temizleme, tip dönüşümü, kalite filtresi)
+  Silver Katmanı          ← src/silver/                            (toplu temizleme, tip dönüşümü, kalite filtresi)
         │
         ▼
-  Gold Katmanı            ← src/features/feature_engineering.py
-  (lag, diff, velocity, rolling window feature'ları)
+  Gold Katmanı            ← src/features/feature_engineering.py    (lag, diff, velocity, rolling window feature'ları)
         │
         ▼
-  Model Eğitimi           ← src/models/train.py
-  (LightGBM × 4 ufuk | Optuna | TimeSeriesSplit | MLflow)
+  Model Eğitimi           ← src/models/train.py                    (LightGBM × 4 ufuk | Optuna | TimeSeriesSplit | MLflow)
         │
         ▼
-  Fırın Otopsisi          ← src/analysis/furnace_autopsy.py
-  (IsolationForest anomali tespiti, duruş şoku analizi)
+  Fırın Otopsisi          ← src/analysis/furnace_autopsy.py        (IsolationForest anomali tespiti, duruş şoku analizi)
   SHAP Açıklanabilirlik   ← src/analysis/shap_explainer.py
         │
         ▼
-  FastAPI Servisi         ← src/api/main.py
-  (POST /predict → anlık Si tahmini + alert)
+  FastAPI Servisi         ← src/api/main.py                        (POST /predict → anlık Si tahmini + alert)
         │
         ▼
-  Model İzleme            ← src/models/monitor.py
-  (7 günlük rolling MAE drift tespiti → otomatik yeniden eğitim)
+  Model İzleme            ← src/models/monitor.py                  (7 günlük rolling MAE drift tespiti → otomatik yeniden eğitim)
 ```
 
 ---
@@ -62,17 +54,17 @@ Ham Veri (Excel/CSV)
 
 ## Teknoloji Yığını
 
-| Katman           | Teknoloji                                         |
-|------------------|---------------------------------------------------|
-| Veri akışı       | Apache Kafka, Apache Spark (Structured Streaming) |
-| Depolama         | PostgreSQL, Parquet (Medallion / Lakehouse)       |
-| Makine öğrenmesi | LightGBM, Optuna, SHAP, scikit-learn              |
-| Deney takibi     | MLflow                                            |
-| API              | FastAPI, Pydantic, Uvicorn                        |
-| Arayüz           | Streamlit                                         |
-| Konfigürasyon    | YAML (paths / settings / schemas)                 |
-| Loglama          | Python logging (modül bazlı dosya + konsol)       |
-| Konteynerizasyon | Docker, Docker Compose                            |
+| Katman | Teknoloji |
+|---|---|
+| Veri akışı | Apache Kafka, Apache Spark (Structured Streaming) |
+| Depolama | PostgreSQL, Parquet (Medallion / Lakehouse) |
+| Makine öğrenmesi | LightGBM, Optuna, SHAP, scikit-learn |
+| Deney takibi | MLflow |
+| API | FastAPI, Pydantic, Uvicorn |
+| Arayüz | Streamlit |
+| Konfigürasyon | YAML (paths / settings / schemas) |
+| Loglama | Python logging (modül bazlı dosya + konsol) |
+| Konteynerizasyon | Docker, Docker Compose |
 
 ---
 
@@ -148,18 +140,18 @@ bf_intelligence/
 
 ## Sensör Değişkenleri
 
-| Grup       | Değişken           | Açıklama                              |
-|------------|------------------------------------------------------------|
-| Besleme    | `Fb`               | Hava debisi (Nm³/h)                   |
-|            | `Th` / `Tc`        | Sıcak / soğuk hava sıcaklığı (°C)     |
-|            | `Fo`               | Oksijen oranı                         |
-|            | `R`                | Cevher/kok oranı                      |
-| Basınç     | `Ph`, `Pc`, `Pt`   | Giriş / merkez / tepe basıncı (bar)   |
-|            | `dP`, `dPu`, `dPl` | Toplam / üst / alt basınç farkı (bar) |
-| Kimya      | `CO2`, `H2`        | Gaz bileşimi (%)                      |
-| Termal     | `Tt1–Tt4`          | Üst sıcaklık profili (°C)             |
-|            | `Tp1–Tp10`         | Probe sıcaklık profili (°C)           |
-| Hedef      | `Si`               | Silisyum içeriği (%)                  |
+| Grup | Değişken | Açıklama |
+|---|---|---|
+| Besleme | `Fb` | Hava debisi (Nm³/h) |
+| | `Th` / `Tc` | Sıcak / soğuk hava sıcaklığı (°C) |
+| | `Fo` | Oksijen oranı |
+| | `R` | Cevher/kok oranı |
+| Basınç | `Ph`, `Pc`, `Pt` | Giriş / merkez / tepe basıncı (bar) |
+| | `dP`, `dPu`, `dPl` | Toplam / üst / alt basınç farkı (bar) |
+| Kimya | `CO2`, `H2` | Gaz bileşimi (%) |
+| Termal | `Tt1–Tt4` | Üst sıcaklık profili (°C) |
+| | `Tp1–Tp10` | Probe sıcaklık profili (°C) |
+| Hedef | `Si` | Silisyum içeriği (%) |
 
 ---
 
@@ -235,11 +227,11 @@ docker exec bf_orchestrator python -m src.check_pipeline
 
 ## API Uç Noktaları
 
-| Metot | Uç Nokta     | Açıklama |
+| Metot | Uç Nokta | Açıklama |
 |---|---|---|
-| `GET` | `/health`    | Model durumu, yüklü ufuklar, Si eşikleri |
-| `POST` | `/predict`  | Sensör verisiyle Si tahmini + alert seviyesi |
-| `POST` | `/reload`   | Model dosyalarını diskten yeniden yükle |
+| `GET` | `/health` | Model durumu, yüklü ufuklar, Si eşikleri |
+| `POST` | `/predict` | Sensör verisiyle Si tahmini + alert seviyesi |
+| `POST` | `/reload` | Model dosyalarını diskten yeniden yükle |
 
 Alert seviyeleri: `GREEN` (stabil) → `YELLOW` (±0.10 sapma bekleniyor) → `RED` (Si eşik dışına çıktı)
 
@@ -247,11 +239,28 @@ Alert seviyeleri: `GREEN` (stabil) → `YELLOW` (±0.10 sapma bekleniyor) → `R
 
 ## Servis Adresleri
 
-| Servis            | Adres |
+| Servis | Adres |
 |---|---|
 | Streamlit Arayüzü | http://localhost:8501 |
-| FastAPI           | http://localhost:8000 |
-| MLflow            | http://localhost:5000 |
+| FastAPI | http://localhost:8000 |
+| MLflow | http://localhost:5000 |
+
+---
+
+## Model Performansı
+
+Tüm modeller Optuna ile tune edilmiş, TimeSeriesSplit cross-validation ve MLflow ile takip edilmiştir.
+
+| Ufuk | MAE | RMSE | R² | Baseline MAE | İyileşme |
+|---|---|---|---|---|---|
+| 2h | 0.0823 | 0.1312 | 0.577 | 0.1037 | %20.7 |
+| 4h | 0.0861 | 0.1362 | 0.589 | 0.1114 | %22.7 |
+| 6h | 0.0907 | 0.1454 | 0.510 | 0.1179 | %23.0 |
+| 8h | 0.0923 | 0.1475 | 0.481 | 0.1212 | %23.8 |
+
+> Baseline MAE: bir önceki Si ölçümünü tahmin olarak kullanan naive model.
+
+**8h ufku için en baskın feature'lar** (SHAP): `Si_roll_mean_4h`, `Si`, `Si_roll_mean_8h`, `Si_roll_mean_24h`, `R_roll_mean_4h`, `month`
 
 ---
 
@@ -262,8 +271,8 @@ Her eğitim ve analiz koşusu sonunda `reports/` dizinine üretilen dosyalar:
 | Dosya | İçerik |
 |---|---|
 | `feature_importance_{h}h.png / .csv` | Top 30 LightGBM feature importance |
-| `model_diagnostics_{h}h.png`         | Tahmin vs Gerçek, Artık, Hata Dağılımı, Zaman Serisi |
-| `shap_importance_{h}h.png`           | SHAP bar plot |
-| `shap_beeswarm_{h}h.png`             | SHAP beeswarm (etki yönü + büyüklüğü) |
-| `furnace_autopsy.png`                | Anomali haritası + duruş işaretleri |
-| `model_drift_history.csv`            | Zaman serisi MAE geçmişi (Grafana/PowerBI uyumlu) |
+| `model_diagnostics_{h}h.png` | Tahmin vs Gerçek, Artık, Hata Dağılımı, Zaman Serisi |
+| `shap_importance_{h}h.png` | SHAP bar plot |
+| `shap_beeswarm_{h}h.png` | SHAP beeswarm (etki yönü + büyüklüğü) |
+| `furnace_autopsy.png` | Anomali haritası + duruş işaretleri |
+| `model_drift_history.csv` | Zaman serisi MAE geçmişi (Grafana/PowerBI uyumlu) |

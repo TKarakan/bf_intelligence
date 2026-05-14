@@ -3,12 +3,16 @@ analysis/furnace_autopsy.py — Furnace Autopsy & Anomaly Analysis
 =================================================================
 Kullanım:
   - Pipeline'dan: run_autopsy()        ← her training sonrası otomatik
-  - Tekil:        python analysis/furnace_autopsy.py
+  - Tekil:        docker exec bf_orchestrator python -m src.analysis.furnace_autopsy
 
-Değişiklikler (multi-horizon):
+
   - bf_model_lgb_Xh.joblib (4 model)
   - Feature importance her horizon için ayrı loglanır
   - DB export: gold_furnace_analysis tablosu aynı kalır
+
+  
+       Tüm feature'lar gold_refiner tarafından üretilip
+       gold parquet'e yazıldığından burası direkt oradan okur.
 """
 
 import os
@@ -21,7 +25,6 @@ import joblib
 from sklearn.ensemble import IsolationForest
 from src.utils.config_loader import load_config
 from src.utils.logger import get_logger
-from src.features.feature_engineering import apply_blast_furnace_features
 
 logger = get_logger(__name__)
 
@@ -41,6 +44,7 @@ _DROP_COLS = [
 def run_autopsy() -> None:
     """
     Fırın otopsisi: anomali tespiti, duruş şoku analizi, görsel rapor.
+    Feature'lar gold_refiner tarafından üretilmiş gold parquet'ten okunur.
     DB export ayrı try bloğunda — DB yoksa analiz yine de tamamlanır.
     """
     gold_path   = os.path.join(paths_cfg.get("feature_gold_dir", "/app/data/gold"), "feature_store")
@@ -51,8 +55,10 @@ def run_autopsy() -> None:
 
     try:
         logger.info(f"Fırın Otopsisi Başlıyor... Veri: {gold_path}")
+
+        # Gold parquet'te feature'lar gold_refiner tarafından zaten üretilmiş olarak gelir.
+        # apply_blast_furnace_features çağrısına gerek yok.
         df = pd.read_parquet(gold_path)
-        df = apply_blast_furnace_features(df)
         df = df.sort_values("si_dt").reset_index(drop=True)
 
         # --- Anomali Tespiti (IsolationForest) ---

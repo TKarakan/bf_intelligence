@@ -1,37 +1,44 @@
-# --- Python & Cache ---
+# --- Python & Ortam (Environment) ---
 __pycache__/
 *.py[cod]
 *$py.class
-.pytest_cache/
-.ipynb_checkpoints/
+*.so
+venv/
+.venv/
+env/
+.env
 
-# --- Veri ve Model  ---
+# --- Veri ve Modeller ---
 data/
-*.xlsx
 *.csv
+*.xlsx
 *.parquet
 *.pickle
+*.pkl
 models/
 
 # --- MLflow & Deney Takibi ---
 mlflow_data/
+mlruns/
 reports/
 
-# --- IDE & Sistem ---
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# --- Loglar ve Geçici Dosyalar ---
-logs/*.log
-*.tmp
-.env
-
-# --- Spark & Hadoop  ---
+# --- Spark & Hadoop ---
 spark-warehouse/
 metastore_db/
 derby.log
 checkpoint/
 checkpoints/
 .spark-staged/
+
+# --- Test, Loglar ve Geçici Dosyalar ---
+.pytest_cache/
+logs/
+*.log
+*.tmp
+
+# --- IDE & İşletim Sistemi ---
+.vscode/
+.idea/
+.ipynb_checkpoints/
+.DS_Store
+Thumbs.db

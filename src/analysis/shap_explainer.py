@@ -3,8 +3,8 @@ analysis/shap_explainer.py — SHAP Feature Explainability
 =========================================================
 Kullanım:
   - Pipeline'dan: run_shap_analysis()         ← her training sonrası otomatik
-  - Tekil tüm:    python analysis/shap_explainer.py
-  - Tek horizon:  python analysis/shap_explainer.py --horizon 8
+  - Tekil tüm:    docker exec bf_orchestrator python -m src.analysis.shap_explainer
+  - Tek horizon:  docker exec bf_orchestrator python -m src.analysis.shap_explainer --horizon 8
 
 Çıktılar (reports/ altına, her horizon için ayrı):
   shap_importance_Xh.png   — bar plot (top features)
