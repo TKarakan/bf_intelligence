@@ -14,7 +14,13 @@ def get_logger(name):
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
 
-        # 1. Konsol Handler
+        # 1. Konsol Handler (Windows UTF-8 uyumluluğu ile)
+        try:
+            if hasattr(sys.stdout, "reconfigure"):
+                sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)

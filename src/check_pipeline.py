@@ -1,180 +1,166 @@
 #!/usr/bin/env python3
 """
-pipeline_check.py
+check_pipeline.py
 -----------------
-Tüm Medallion katmanlarını kontrol eder ve özet rapor üretir.
+Tüm Medallion katmanlarını (Bronze, Silver, Gold), fırın duruşlarını
+ve eğitilmiş multi-horizon modellerini kontrol eder.
 """
 
 import os
+import sys
 import pandas as pd
-from pyspark.sql import SparkSession
+from src.utils.config_loader import load_config
 
-# Yollar
-BRONZE_SENSORS = "/app/data/bronze/sensors"
-BRONZE_TARGETS = "/app/data/bronze/targets"
-SILVER = "/app/data/silver/cleaned"
-GOLD = "/app/data/gold/feature_store"
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+cfg = load_config()
+paths_cfg = cfg.get("paths", {})
+
+def _resolve_dir(raw_path: str, default: str) -> str:
+    path = raw_path or default
+    if path.startswith("/app/") and not os.path.exists("/app"):
+        path = path.replace("/app/", "", 1)
+    return path
+
+BRONZE_BASE = _resolve_dir(paths_cfg.get("raw_bronze_dir", "data/bronze"), "data/bronze")
+SILVER_BASE = _resolve_dir(paths_cfg.get("refined_silver_dir", "data/silver"), "data/silver")
+GOLD_BASE   = _resolve_dir(paths_cfg.get("feature_gold_dir", "data/gold"), "data/gold")
+MODELS_DIR  = _resolve_dir(paths_cfg.get("models_dir", "models"), "models")
+
+BRONZE_SENSORS = os.path.join(BRONZE_BASE, "sensors")
+BRONZE_TARGETS = os.path.join(BRONZE_BASE, "targets")
+SILVER = os.path.join(SILVER_BASE, "cleaned")
+GOLD   = os.path.join(GOLD_BASE, "feature_store") if not GOLD_BASE.endswith("feature_store") else GOLD_BASE
+
+FORECAST_HORIZONS = [2, 4, 6, 8]
+
 
 def check_bronze():
-    
     print("=" * 60)
     print(" BRONZE KATMANI")
     print("=" * 60)
     
-    spark = SparkSession.builder.appName("Check").getOrCreate()
-    
     # Sensors
     if os.path.exists(BRONZE_SENSORS):
-        df = spark.read.parquet(BRONZE_SENSORS)
-        print(f"Sensors: {df.count()} satır")
-        print(f"Kolonlar: {df.columns}")
-        df.select("dt").show(3, truncate=False)
-        df.select("dt").tail(3)
+        try:
+            df = pd.read_parquet(BRONZE_SENSORS)
+            print(f"Sensors: {len(df)} satır | Kolonlar: {len(df.columns)}")
+            if "dt" in df.columns:
+                print("İlk 2 kayıt:")
+                print(df[["dt"] + [c for c in ["Fb", "Th", "Si"] if c in df.columns]].head(2))
+        except Exception as e:
+            print(f"Sensors okuma hatası: {e}")
     else:
-        print(" Bronze/sensors yok!")
+        print("ℹ️ Bronze/sensors yolu bulunamadı (henüz ingest edilmemiş olabilir).")
     
     # Targets
     if os.path.exists(BRONZE_TARGETS):
-        df = spark.read.parquet(BRONZE_TARGETS)
-        print(f"\nTargets: {df.count()} satır")
-        print(f"Kolonlar: {df.columns}")
-        df.select("dt", "Si").show(3, truncate=False)
+        try:
+            df = pd.read_parquet(BRONZE_TARGETS)
+            print(f"\nTargets: {len(df)} satır")
+            if "dt" in df.columns and "Si" in df.columns:
+                print(df[["dt", "Si"]].head(2))
+        except Exception as e:
+            print(f"Targets okuma hatası: {e}")
     else:
-        print(" Bronze/targets yok!")
-    
-    spark.stop()
+        print("ℹ️ Bronze/targets yolu bulunamadı.")
+
 
 def check_silver():
-    """Silver katmanını kontrol et."""
     print("\n" + "=" * 60)
     print(" SILVER KATMANI")
     print("=" * 60)
     
-    spark = SparkSession.builder.appName("Check").getOrCreate()
-    
     if os.path.exists(SILVER):
-        df = spark.read.parquet(SILVER)
-        n = df.count()
-        print(f"Toplam satır: {n}")
-        print(f"Kolonlar: {df.columns}")
-        
-        # Zaman dağılımı
-        print("\nİlk 5 satır:")
-        df.orderBy("si_dt").show(5, truncate=False)
-        
-        print("\nSon 5 satır:")
-        df.orderBy("si_dt").tail(5)
-        
-        # Saatlik interval dağılımı
-        from pyspark.sql import functions as F
-        from pyspark.sql.window import Window
-        
-        w = Window.orderBy("si_dt")
-        intervals = df.withColumn("next_si_dt", F.lead("si_dt", 1).over(w)) \
-                      .withColumn("interval_hours", 
-                          (F.col("next_si_dt").cast("long") - F.col("si_dt").cast("long")) / 3600.0)
-        
-        print("\nInterval dağılımı (saat):")
-        intervals.select("interval_hours").summary("min", "25%", "50%", "75%", "max").show()
-        
-        # Si dağılımı
-        print("\nSi dağılımı:")
-        df.select("Si").summary("min", "25%", "50%", "75%", "max").show()
-        
+        try:
+            df = pd.read_parquet(SILVER)
+            print(f"Toplam satır: {len(df)} | Kolon sayısı: {len(df.columns)}")
+            if "si_dt" in df.columns and "Si" in df.columns:
+                df["si_dt"] = pd.to_datetime(df["si_dt"])
+                print(f"Zaman aralığı: {df['si_dt'].min()} -> {df['si_dt'].max()}")
+                print(f"Si istatistikleri:\n{df['Si'].describe().to_string()}")
+        except Exception as e:
+            print(f"Silver okuma hatası: {e}")
     else:
-        print(" Silver yok!")
-    
-    spark.stop()
+        print("ℹ️ Silver/cleaned yolu bulunamadı.")
+
 
 def check_gold():
-    """Gold katmanını kontrol et."""
     print("\n" + "=" * 60)
-    print(" GOLD KATMANI")
+    print(" GOLD KATMANI & FEATURE STORE")
     print("=" * 60)
     
     if os.path.exists(GOLD):
-        df = pd.read_parquet(GOLD)
-        print(f"Toplam satır: {len(df)}")
-        print(f"Kolonlar: {df.columns.tolist()}")
-        
-        print("\nİlk 5 satır (si_dt, Si, target):")
-        print(df[['si_dt', 'Si', 'target_Si', 'hours_to_next_cast']].head())
-        
-        print("\nSon 5 satır:")
-        print(df[['si_dt', 'Si', 'target_Si', 'hours_to_next_cast']].tail())
-        
-        print("\nTarget dağılımı:")
-        print(df['target_Si'].describe())
-        
-        print("\nHours to next cast dağılımı:")
-        print(df['hours_to_next_cast'].describe())
-        
-        # Korelasyonlar
-        print("\nSi ile target arasındaki korelasyon:")
-        print(df['Si'].corr(df['target_Si']))
-        
-        # Feature importance (eğer model varsa)
-        model_path = "/app/models/bf_model_v4.joblib"
-        if os.path.exists(model_path):
+        try:
+            df = pd.read_parquet(GOLD)
+            print(f"Toplam satır: {len(df)} | Toplam kolon: {len(df.columns)}")
+            
+            target_cols = [c for c in df.columns if c.startswith("target_Si_")]
+            print(f"Multi-Horizon Hedef Kolonları: {target_cols}")
+            
+            preview_cols = ["si_dt", "Si"] + target_cols
+            preview_cols = [c for c in preview_cols if c in df.columns]
+            if "hours_to_next_cast" in df.columns:
+                preview_cols.append("hours_to_next_cast")
+                
+            print("\nİlk 3 satır:")
+            print(df[preview_cols].head(3))
+            
+            # Model dosyaları kontrolü
+            print("\nEğitilmiş Modeller:")
             import joblib
-            model = joblib.load(model_path)
-            print(f"\nModel bulundu: {model_path}")
-            print(f"Feature importance (top 10):")
-            importance = pd.Series(model.feature_importances_, index=df.drop(columns=['si_dt', 'next_si_dt', 'hours_to_next_cast', 'target_Si', 'target_Si_4h_ahead']).columns)
-            print(importance.sort_values(ascending=False).head(10))
-        else:
-            print("\n Model dosyası bulunamadı")
+            for h in FORECAST_HORIZONS:
+                m_path = os.path.join(MODELS_DIR, f"bf_model_lgb_{h}h.joblib")
+                if os.path.exists(m_path):
+                    model = joblib.load(m_path)
+                    n_features = len(model.feature_name_) if hasattr(model, "feature_name_") else "?"
+                    print(f"  ✅ [{h}h] {m_path} (Özellik sayısı: {n_features})")
+                else:
+                    print(f"  ❌ [{h}h] Model dosyası yok: {m_path}")
+        except Exception as e:
+            print(f"Gold okuma hatası: {e}")
     else:
-        print("❌ Gold yok!")
+        print("❌ Gold feature store bulunamadı!")
 
-def bosluk_yakala():
-    df = pd.read_parquet('/app/data/gold/feature_store')
-    df = df.sort_values("si_dt")
 
-    # En büyük boşluğu bul
-    big_gap = df[df['hours_to_next_cast'] > 50].copy()
-
-    if not big_gap.empty:
-        print("\n--- 🚩 KRİTİK BOŞLUK TESPİT EDİLDİ ---")
-        for i, row in big_gap.iterrows():
-            print(f"Duruş Başlangıcı: {row['si_dt']}")
-            print(f"Duruş Süresi: {row['hours_to_next_cast']:.2f} saat")
-            print(f"Duruş Öncesi Son Silicon (Si): {row['Si']}")
-            print("-" * 30)
-    else:
-        print("100 saatten büyük boşluk bulunamadı.")
-
-def bosluk_sonrasi():
-    df = pd.read_parquet('/app/data/gold/feature_store')
-    df = df.sort_values("si_dt").reset_index(drop=True)
-
-    # 50 saatten büyük boşlukların indekslerini bul
-    gap_indices = df[df['hours_to_next_cast'] > 50].index
-
-    print(f"---  FIRIN UYANIŞ ANALİZİ (Duruş Sonrası İlk Satırlar) ---")
-
-    for idx in gap_indices:
-        # Duruştan önceki son satır ve sonraki ilk 3 satır
-        analysis_slice = df.iloc[max(0, idx): idx + 4]
-        
-        print(f"\n📍 Boşluk Başlangıcı: {df.iloc[idx]['si_dt']} (Süre: {df.iloc[idx]['hours_to_next_cast']:.2f} saat)")
-        print(analysis_slice[['si_dt', 'Si', 'Th', 'mean_tp', 'hours_to_next_cast']])
-        print("-" * 50)
+def check_furnace_gaps():
+    print("\n" + "=" * 60)
+    print(" FIRIN DURUŞ & BOŞLUK ANALİZİ")
+    print("=" * 60)
     
+    if not os.path.exists(GOLD):
+        return
+
+    try:
+        df = pd.read_parquet(GOLD)
+        if "hours_to_next_cast" not in df.columns:
+            return
+
+        df["si_dt"] = pd.to_datetime(df["si_dt"])
+        df = df.sort_values("si_dt").reset_index(drop=True)
+
+        big_gaps = df[df["hours_to_next_cast"] > 50]
+        if not big_gaps.empty:
+            print(f"🚩 >50 Saatlik Kritik Duruş Sayısı: {len(big_gaps)}")
+            for _, row in big_gaps.iterrows():
+                print(f"  Duruş Zamanı: {row['si_dt']} | Süre: {row['hours_to_next_cast']:.1f}h | Son Si: {row['Si']:.2f}")
+        else:
+            print("50 saatten büyük fırın duruşu tespit edilmedi.")
+    except Exception as e:
+        print(f"Duruş analizi hatası: {e}")
+
 
 def main():
-    print(" PIPELINE KONTROL BAŞLIYOR")
-    
+    print("🔍 BF INTELLIGENCE — SİSTEM SAĞLIK & PİPELİNE DENETİMİ")
     check_bronze()
     check_silver()
     check_gold()
-
-    bosluk_yakala()
-    bosluk_sonrasi()
-    
+    check_furnace_gaps()
     print("\n" + "=" * 60)
-    print(" KONTROL TAMAMLANDI")
+    print(" DENETİM TAMAMLANDI")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

@@ -8,19 +8,21 @@ venv/
 env/
 .env
 
-# --- Veri ve Modeller ---
-data/
+# --- Veri ve Modeller (Sadece Kök Dizin) ---
+/data/
 *.csv
 *.xlsx
 *.parquet
 *.pickle
 *.pkl
-models/
+*.joblib
+/models/
 
 # --- MLflow & Deney Takibi ---
-mlflow_data/
-mlruns/
-reports/
+/mlflow_data/
+/mlruns/
+/reports/
+*.db
 
 # --- Spark & Hadoop ---
 spark-warehouse/

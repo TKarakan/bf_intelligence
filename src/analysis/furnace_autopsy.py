@@ -47,9 +47,16 @@ def run_autopsy() -> None:
     Feature'lar gold_refiner tarafından üretilmiş gold parquet'ten okunur.
     DB export ayrı try bloğunda — DB yoksa analiz yine de tamamlanır.
     """
-    gold_path   = os.path.join(paths_cfg.get("feature_gold_dir", "/app/data/gold"), "feature_store")
-    reports_dir = paths_cfg.get("reports_dir", "reports")
-    models_dir  = paths_cfg.get("models_dir",  "models")
+    def _resolve_dir(raw_path: str, default: str) -> str:
+        path = raw_path or default
+        if path.startswith("/app/") and not os.path.exists("/app"):
+            path = path.replace("/app/", "", 1)
+        return path
+
+    gold_base   = _resolve_dir(paths_cfg.get("feature_gold_dir", "data/gold"), "data/gold")
+    gold_path   = os.path.join(gold_base, "feature_store") if not gold_base.endswith("feature_store") else gold_base
+    reports_dir = _resolve_dir(paths_cfg.get("reports_dir", "reports"), "reports")
+    models_dir  = _resolve_dir(paths_cfg.get("models_dir", "models"), "models")
 
     os.makedirs(reports_dir, exist_ok=True)
 
@@ -57,13 +64,16 @@ def run_autopsy() -> None:
         logger.info(f"Fırın Otopsisi Başlıyor... Veri: {gold_path}")
 
         # Gold parquet'te feature'lar gold_refiner tarafından zaten üretilmiş olarak gelir.
-        # apply_blast_furnace_features çağrısına gerek yok.
         df = pd.read_parquet(gold_path)
         df = df.sort_values("si_dt").reset_index(drop=True)
 
         # --- Anomali Tespiti (IsolationForest) ---
         logger.info("Anomali tespiti yapılıyor...")
-        iso_features = ["Si", "Th", "Tc", "Fb", "CO2", "H2", "gas_ratio", "thermal_efficiency"]
+        iso_features = [
+            "Si", "Th", "Tc", "Fb", "CO2", "H2",
+            "gas_reduction_ratio", "blast_heat_addition",
+            "tp_imbalance", "permeability_index"
+        ]
         iso_features = [f for f in iso_features if f in df.columns]
 
         iso_model          = IsolationForest(contamination=0.05, random_state=42)

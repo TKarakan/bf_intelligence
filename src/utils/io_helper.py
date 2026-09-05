@@ -47,9 +47,31 @@ def save_figure(fig_name, report_dir_path):
         # Kaydetme işlemi
         plt.savefig(full_file_path, bbox_inches='tight', dpi=300)
         plt.close() # Bellek yönetimi için önemli
-        
         logger.info(f"Rapor görseli kaydedildi: {full_file_path}")
     except Exception as e:
         logger.error(f"Görsel kaydedilirken hata: {e}")
         raise
 
+
+def save_data(df: pd.DataFrame, path, format: str = None, **kwargs):
+    """DataFrame'i belirtilen formatta kaydeder (csv, parquet, json)."""
+    try:
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
+        file_format = format or path.suffix.lstrip(".").lower() or "csv"
+        
+        if file_format == "csv":
+            df.to_csv(path, index=kwargs.get("index", False), **{k: v for k, v in kwargs.items() if k != "index"})
+        elif file_format in ("parquet", "pq"):
+            df.to_parquet(path, index=kwargs.get("index", False), **{k: v for k, v in kwargs.items() if k != "index"})
+        elif file_format == "json":
+            df.to_json(path, **kwargs)
+        else:
+            df.to_csv(path, index=False)
+            
+        logger.info(f"Veri kaydedildi: {path} (Format: {file_format})")
+        return path
+    except Exception as e:
+        logger.error(f"Veri kaydedilemedi ({path}): {e}")
+        raise

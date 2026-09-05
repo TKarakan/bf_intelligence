@@ -13,6 +13,7 @@ Kullanım:
 """
 
 import os
+import shutil
 import subprocess
 from src.utils.config_loader import load_config
 from src.utils.kafka_utils import get_kafka_config
@@ -52,27 +53,33 @@ def _rm_rf(path: str):
     """
     Dizini veya mount point içeriğini siler.
     Mount point ise sadece içindekileri temizler, dizin kendisini korur.
+    Cross-platform: Windows ve Linux uyumlu (shutil.rmtree / os.remove).
     """
     if not os.path.exists(path):
         return
 
-    if _is_mount_point(path):
-        # Mount point: sadece içindekileri sil
-        for item in os.listdir(path):
-            item_path = os.path.join(path, item)
-            subprocess.run(["rm", "-rf", item_path], capture_output=True)
-        logger.info(f"   🗑️  Temizlendi (mount point): {path}/*")
-    else:
-        # Normal dizin: komple sil
-        result = subprocess.run(
-            ["rm", "-rf", path],
-            capture_output=True,
-            text=True
-        )
-        if result.returncode == 0:
-            logger.info(f"   🗑️  Silindi: {path}")
+    try:
+        if _is_mount_point(path):
+            # Mount point: sadece içindekileri sil
+            for item in os.listdir(path):
+                item_path = os.path.join(path, item)
+                if os.path.isdir(item_path):
+                    shutil.rmtree(item_path, ignore_errors=True)
+                else:
+                    try:
+                        os.remove(item_path)
+                    except Exception:
+                        pass
+            logger.info(f"   🗑️  Temizlendi (mount point): {path}/*")
         else:
-            logger.warning(f"   ⚠️  Silinemedi: {path} | {result.stderr.strip()}")
+            # Normal dizin veya dosya
+            if os.path.isdir(path):
+                shutil.rmtree(path, ignore_errors=True)
+            else:
+                os.remove(path)
+            logger.info(f"   🗑️  Silindi: {path}")
+    except Exception as e:
+        logger.warning(f"   ⚠️  Silinemedi: {path} | {e}")
 
 
 def cleanup_pipeline(fresh: bool = False):

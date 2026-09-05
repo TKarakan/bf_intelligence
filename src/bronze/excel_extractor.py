@@ -19,7 +19,13 @@ def extract_excel_sheets():
         
         
         source_dir = PATHS.get('raw_source_dir', 'data/raw/source')
-        bronze_dir = PATHS.get('bronze_dir', 'data/bronze')
+        bronze_dir = PATHS.get('raw_bronze_dir', PATHS.get('bronze_dir', 'data/bronze'))
+        
+        # Docker dışı (yerel) çalıştırmada /app/ yollarını yerel dosya sistemine uyarla
+        if source_dir.startswith("/app/") and not os.path.exists("/app"):
+            source_dir = source_dir.replace("/app/", "", 1)
+        if bronze_dir.startswith("/app/") and not os.path.exists("/app"):
+            bronze_dir = bronze_dir.replace("/app/", "", 1)
         
         os.makedirs(bronze_dir, exist_ok=True)
 

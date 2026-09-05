@@ -30,6 +30,8 @@ try:
     KAFKA_BROKER  = os.getenv("KAFKA_BOOTSTRAP_SERVERS", YAML_BROKER)
     TOPIC_SILICON = "silicon-data"
     BRONZE_DIR    = PATHS.get('raw_bronze_dir', 'data/bronze')
+    if BRONZE_DIR.startswith("/app/") and not os.path.exists("/app"):
+        BRONZE_DIR = BRONZE_DIR.replace("/app/", "", 1)
 
     print(f"--- BAĞLANTI ADRESİ: {KAFKA_BROKER} ---")
 except Exception as e:

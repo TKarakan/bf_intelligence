@@ -43,3 +43,19 @@ def export_inference_results(df, experiment_id): #Modelin ürettiği tahminleri 
     except Exception as e:
         logger.error(f"Inference ihraç hatası: {e}")
         raise
+
+
+def export_processed_data(df, prefix: str = "processed_data"):
+    """İşlenmiş veriyi zaman damgalı olarak outputs/results altına kaydeder."""
+    try:
+        timestamp = _now()
+        results_dir = Path("outputs/results")
+        filename = f"{prefix}_{timestamp}.csv"
+        export_path = results_dir / filename
+        
+        io.save_data(df, export_path, format="csv")
+        logger.info(f"İşlenmiş veri dışarı aktarıldı: {filename}")
+        return export_path
+    except Exception as e:
+        logger.error(f"Veri ihraç hatası: {e}")
+        raise
